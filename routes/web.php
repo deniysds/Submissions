@@ -4,5 +4,14 @@ use Illuminate\Support\Facades\Route;
 use Modules\Submissions\Http\Controllers\SubmissionsController;
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::resource('submissions', SubmissionsController::class)->names('submissions');
+    // Alur wizard step-by-step submission
+    Route::get('submissions/create/step-1', [SubmissionsController::class, 'create'])->name('submissions.create.step1');
+    Route::post('submissions/store/step-1', [SubmissionsController::class, 'storeStep1'])->name('submissions.store.step1');
+
+    Route::get('submissions/{id}/create/step-2', [SubmissionsController::class, 'createStep2'])->name('submissions.create.step2');
+    Route::post('submissions/{id}/store/step-2', [SubmissionsController::class, 'storeStep2'])->name('submissions.store.step2');
+    Route::delete('submissions/{id}/delete-file/{fileId}', [SubmissionsController::class, 'deleteFileStep2'])->name('submissions.delete_file.step2');
+
+    // Route bawaan resource
+    Route::resource('submissions', SubmissionsController::class)->names('submissions')->except(['create', 'store']);
 });

@@ -1,7 +1,7 @@
 @extends('layouts.main')
 
 @section('breadcrumbs')
-    {{ Breadcrumbs::render('submissions.create') }}
+    {{ Breadcrumbs::render('submissions.create.step1') }}
 @endsection
 
 @section('content')
@@ -31,7 +31,7 @@
                 <h3 class="kt-card-title text-xl font-bold">Form Pengajuan Naskah Baru (Submission Step 1)</h3>
             </div>
             <div class="kt-card-body p-6">
-                <form action="{{ route('submissions.store') }}" method="POST" class="space-y-8">
+                <form action="{{ route('submissions.store.step1') }}" method="POST" class="space-y-8">
                     @csrf
 
                     <!-- 1. Pilihan Jurnal -->
