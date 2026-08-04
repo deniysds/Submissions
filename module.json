@@ -1,0 +1,30 @@
+{
+    "name": "Submissions",
+    "alias": "submissions",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Submissions\\Providers\\SubmissionsServiceProvider"
+    ],
+    "files": [],
+    "menu": {
+        "main": [
+            {
+                "title": "Submissions",
+                "path": "submissions",
+                "icon": "ki-filled ki-cloud-change text-lg",
+                "classes": "",
+                "attributes": [],
+                "permission": "",
+                "roles": [
+                    "administrator",
+                    "author",
+                    "editor"
+                ]
+            }
+        ],
+        "master": [],
+        "system": []
+    }
+}
