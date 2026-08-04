@@ -16,3 +16,8 @@ Breadcrumbs::for('submissions.create.step2', function (BreadcrumbTrail $trail, $
     $trail->parent('submissions');
     $trail->push('Unggah Berkas Naskah (Step 2)', route('submissions.create.step2', $id));
 });
+
+Breadcrumbs::for('submissions.create.step3', function (BreadcrumbTrail $trail, $id) {
+    $trail->parent('submissions');
+    $trail->push('Metadata Naskah & Penulis (Step 3)', route('submissions.create.step3', $id));
+});

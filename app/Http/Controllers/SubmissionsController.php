@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Modules\Journals\Models\Journal;
 use Modules\Submissions\Models\Submission;
+use Modules\Submissions\Models\SubmissionAuthor;
 use Modules\Submissions\Models\SubmissionFile;
 
 class SubmissionsController extends Controller
@@ -23,7 +24,6 @@ class SubmissionsController extends Controller
             return redirect()->route('login');
         }
 
-        // Tampilkan semua naskah milik user login
         $submissions = Submission::with('journal')
             ->where('corresponding_author_id', $user->id)
             ->latest()
@@ -64,13 +64,23 @@ class SubmissionsController extends Controller
             'checklist.min' => 'Anda wajib menyetujui seluruh kriteria checklist persyaratan penulis sebelum melanjutkan.',
         ]);
 
-        // Buat draf naskah kosong
         $submission = Submission::create([
             'journal_id'              => $request->journal_id,
             'title'                   => 'Draf Naskah Tanpa Judul - ' . Str::random(5),
             'slug'                    => 'draft-' . Str::uuid(),
             'status'                  => 'draft',
             'corresponding_author_id' => $user->id,
+            'created_by'              => $user->id,
+        ]);
+
+        // Secara otomatis daftarkan user login sebagai Penulis Utama (Author #1)
+        SubmissionAuthor::create([
+            'submission_id'           => $submission->id,
+            'name'                    => $user->name,
+            'email'                   => $user->email,
+            'affiliation'             => 'Yayasan Satriabudi Dharma Setia',
+            'is_corresponding_author' => true,
+            'sort_order'              => 1,
             'created_by'              => $user->id,
         ]);
 
@@ -117,7 +127,6 @@ class SubmissionsController extends Controller
             $uploadedFile = $request->file('file');
             $originalName = $uploadedFile->getClientOriginalName();
             
-            // Simpan ke storage local
             $path = $uploadedFile->store('submissions/' . $submission->id, 'public');
 
             SubmissionFile::create([
@@ -134,8 +143,7 @@ class SubmissionsController extends Controller
                 ->with('success', 'Berkas berhasil diunggah.');
         }
 
-        // Jika mengklik tombol Simpan & Lanjutkan
-        // Pastikan minimal ada 1 naskah utama yang diunggah
+        // Cek kelayakan naskah utama
         $hasMainFile = SubmissionFile::where('submission_id', $submission->id)
             ->where('file_role', 'naskah_utama')
             ->exists();
@@ -145,14 +153,13 @@ class SubmissionsController extends Controller
                 ->withErrors(['file' => 'Anda wajib mengunggah minimal 1 berkas dengan jenis "Naskah Utama" sebelum melanjutkan.']);
         }
 
-        // Di sini kita bisa langsung redirect ke index submissions untuk sementara, 
-        // atau lanjut ke langkah berikutnya jika sudah dikembangkan.
-        return redirect()->route('submissions.index')
-            ->with('success', 'Unggah berkas berhasil disimpan. Draf naskah telah diperbarui.');
+        // Lanjut ke Step 3 Metadata
+        return redirect()->route('submissions.create.step3', $submission->id)
+            ->with('success', 'Unggah berkas berhasil disimpan. Silakan lengkapi metadata naskah.');
     }
 
     /**
-     * Delete uploaded file
+     * Delete uploaded file (Step 2)
      */
     public function deleteFileStep2($id, $fileId)
     {
@@ -164,7 +171,6 @@ class SubmissionsController extends Controller
         $submission = Submission::where('corresponding_author_id', $user->id)->findOrFail($id);
         $file = SubmissionFile::where('submission_id', $submission->id)->findOrFail($fileId);
 
-        // Hapus fisik berkas dari disk storage
         if (Storage::disk($file->disk)->exists($file->path)) {
             Storage::disk($file->disk)->delete($file->path);
         }
@@ -173,5 +179,117 @@ class SubmissionsController extends Controller
 
         return redirect()->route('submissions.create.step2', $submission->id)
             ->with('success', 'Berkas berhasil dihapus.');
+    }
+
+    /**
+     * Step 3: Show Metadata & Authors Form
+     */
+    public function createStep3($id)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
+        $submission = Submission::with('authors')
+            ->where('corresponding_author_id', $user->id)
+            ->findOrFail($id);
+
+        return view('submissions::step3', compact('submission'));
+    }
+
+    /**
+     * Add Co-Author (Step 3)
+     */
+    public function addAuthorStep3(Request $request, $id)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
+        $submission = Submission::where('corresponding_author_id', $user->id)->findOrFail($id);
+
+        $request->validate([
+            'name'        => 'required|string|max:255',
+            'email'       => 'required|email|max:255',
+            'affiliation' => 'nullable|string|max:255',
+        ]);
+
+        $maxOrder = SubmissionAuthor::where('submission_id', $submission->id)->max('sort_order') ?? 0;
+
+        SubmissionAuthor::create([
+            'submission_id'           => $submission->id,
+            'name'                    => $request->name,
+            'email'                   => $request->email,
+            'affiliation'             => $request->affiliation,
+            'is_corresponding_author' => false,
+            'sort_order'              => $maxOrder + 1,
+            'created_by'              => $user->id,
+        ]);
+
+        return redirect()->route('submissions.create.step3', $submission->id)
+            ->with('success', 'Penulis anggota berhasil ditambahkan.');
+    }
+
+    /**
+     * Delete Co-Author (Step 3)
+     */
+    public function deleteAuthorStep3($id, $authorId)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
+        $submission = Submission::where('corresponding_author_id', $user->id)->findOrFail($id);
+        $author = SubmissionAuthor::where('submission_id', $submission->id)->findOrFail($authorId);
+
+        if ($author->is_corresponding_author) {
+            return redirect()->route('submissions.create.step3', $submission->id)
+                ->withErrors(['author' => 'Penulis utama (corresponding author) tidak dapat dihapus.']);
+        }
+
+        $author->delete();
+
+        return redirect()->route('submissions.create.step3', $submission->id)
+            ->with('success', 'Penulis anggota berhasil dihapus.');
+    }
+
+    /**
+     * Store Step 3: Metadata Naskah
+     */
+    public function storeStep3(Request $request, $id)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
+        $submission = Submission::where('corresponding_author_id', $user->id)->findOrFail($id);
+
+        $request->validate([
+            'title'    => 'required|string|max:500',
+            'abstract' => 'required|string|min:50',
+            'keywords' => 'required|string',
+        ], [
+            'title.required'    => 'Judul naskah wajib diisi.',
+            'abstract.min'      => 'Abstrak naskah minimal memuat 50 karakter.',
+            'keywords.required' => 'Kata kunci (keywords) wajib diisi.',
+        ]);
+
+        // Split keywords by comma
+        $keywordsArray = array_map('trim', explode(',', $request->keywords));
+
+        $submission->update([
+            'title'      => $request->title,
+            'slug'       => Str::slug(Str::limit($request->title, 100)) . '-' . Str::random(5),
+            'abstract'   => $request->abstract,
+            'keywords'   => $keywordsArray,
+            'updated_by' => $user->id,
+        ]);
+
+        return redirect()->route('submissions.index')
+            ->with('success', 'Metadata naskah berhasil disimpan dan draf naskah telah diperbarui.');
     }
 }

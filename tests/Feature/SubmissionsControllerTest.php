@@ -7,6 +7,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Modules\Journals\Models\Journal;
 use Modules\Submissions\Models\Submission;
+use Modules\Submissions\Models\SubmissionAuthor;
 use Modules\Submissions\Models\SubmissionFile;
 use Modules\Usermanagement\Models\User;
 use Tests\TestCase;
@@ -104,5 +105,58 @@ class SubmissionsControllerTest extends TestCase
 
         $response->assertRedirect(route('submissions.create.step2', $submission->id));
         $response->assertSessionHasErrors(['file']);
+    }
+
+    public function test_user_can_access_step3_and_update_metadata()
+    {
+        $submission = Submission::create([
+            'journal_id'              => $this->journal->id,
+            'title'                   => 'Draf Naskah Awal',
+            'slug'                    => 'draft-slug',
+            'status'                  => 'draft',
+            'corresponding_author_id' => $this->user->id,
+        ]);
+
+        $response = $this->actingAs($this->user)->get(route('submissions.create.step3', $submission->id));
+        $response->assertStatus(200);
+        $response->assertViewIs('submissions::step3');
+
+        $postResponse = $this->actingAs($this->user)->post(route('submissions.store.step3', $submission->id), [
+            'title'    => 'Pengaruh Genomics Terhadap Kesehatan Masyarakat',
+            'abstract' => 'Abstrak penelitian ini membahas pengaruh teknologi genomik modern secara mendalam untuk masyarakat.',
+            'keywords' => 'Genomik, Kesehatan, Biomolekuler',
+        ]);
+
+        $postResponse->assertRedirect(route('submissions.index'));
+        $this->assertDatabaseHas('submissions', [
+            'id'    => $submission->id,
+            'title' => 'Pengaruh Genomics Terhadap Kesehatan Masyarakat',
+        ]);
+    }
+
+    public function test_user_can_add_and_delete_co_authors()
+    {
+        $submission = Submission::create([
+            'journal_id'              => $this->journal->id,
+            'title'                   => 'Draf Naskah',
+            'slug'                    => 'draft-slug',
+            'status'                  => 'draft',
+            'corresponding_author_id' => $this->user->id,
+        ]);
+
+        $response = $this->actingAs($this->user)->post(route('submissions.add_author.step3', $submission->id), [
+            'name'        => 'Dr. Budi Santoso',
+            'email'       => 'budi@satriabudi.org',
+            'affiliation' => 'Universitas Indonesia',
+        ]);
+
+        $response->assertRedirect(route('submissions.create.step3', $submission->id));
+        
+        $author = SubmissionAuthor::where('email', 'budi@satriabudi.org')->first();
+        $this->assertNotNull($author);
+
+        $deleteResponse = $this->actingAs($this->user)->delete(route('submissions.delete_author.step3', [$submission->id, $author->id]));
+        $deleteResponse->assertRedirect(route('submissions.create.step3', $submission->id));
+        $this->assertSoftDeleted($author);
     }
 }
