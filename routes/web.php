@@ -17,6 +17,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('submissions/{id}/add-author', [SubmissionsController::class, 'addAuthorStep3'])->name('submissions.add_author.step3');
     Route::delete('submissions/{id}/delete-author/{authorId}', [SubmissionsController::class, 'deleteAuthorStep3'])->name('submissions.delete_author.step3');
 
+    Route::get('submissions/{id}/create/step-4', [SubmissionsController::class, 'createStep4'])->name('submissions.create.step4');
+    Route::post('submissions/{id}/finish', [SubmissionsController::class, 'finishStep4'])->name('submissions.finish.step4');
+
     // Route bawaan resource
     Route::resource('submissions', SubmissionsController::class)->names('submissions')->except(['create', 'store']);
 });

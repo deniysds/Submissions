@@ -58,7 +58,9 @@
                                                     <i class="ki-filled ki-pencil"></i> Lanjutkan
                                                 </a>
                                             @else
-                                                <span class="text-gray-400">-</span>
+                                                <a href="{{ route('submissions.show', $sub->id) }}" class="kt-btn kt-btn-xs kt-btn-ghost text-primary">
+                                                    <i class="ki-filled ki-eye"></i> Detail
+                                                </a>
                                             @endif
                                         </td>
                                     </tr>

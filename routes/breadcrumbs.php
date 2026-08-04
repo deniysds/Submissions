@@ -21,3 +21,13 @@ Breadcrumbs::for('submissions.create.step3', function (BreadcrumbTrail $trail, $
     $trail->parent('submissions');
     $trail->push('Metadata Naskah & Penulis (Step 3)', route('submissions.create.step3', $id));
 });
+
+Breadcrumbs::for('submissions.create.step4', function (BreadcrumbTrail $trail, $id) {
+    $trail->parent('submissions');
+    $trail->push('Konfirmasi & Finalisasi (Step 4)', route('submissions.create.step4', $id));
+});
+
+Breadcrumbs::for('submissions.show', function (BreadcrumbTrail $trail, $submission) {
+    $trail->parent('submissions');
+    $trail->push('Detail Naskah: ' . ($submission->title ?? 'Submission'), route('submissions.show', $submission->id));
+});

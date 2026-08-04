@@ -33,6 +33,23 @@ class SubmissionsController extends Controller
     }
 
     /**
+     * Show detail of submission.
+     */
+    public function show($id)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
+        $submission = Submission::with(['journal', 'files', 'authors'])
+            ->where('corresponding_author_id', $user->id)
+            ->findOrFail($id);
+
+        return view('submissions::show', compact('submission'));
+    }
+
+    /**
      * Step 1: Show form for creating a new submission (Select Journal & Author Checklist).
      */
     public function create()
@@ -73,7 +90,6 @@ class SubmissionsController extends Controller
             'created_by'              => $user->id,
         ]);
 
-        // Secara otomatis daftarkan user login sebagai Penulis Utama (Author #1)
         SubmissionAuthor::create([
             'submission_id'           => $submission->id,
             'name'                    => $user->name,
@@ -117,7 +133,6 @@ class SubmissionsController extends Controller
 
         $submission = Submission::where('corresponding_author_id', $user->id)->findOrFail($id);
 
-        // Jika mengunggah berkas baru
         if ($request->hasFile('file')) {
             $request->validate([
                 'file'      => 'required|file|mimes:docx,doc,pdf|max:10240',
@@ -143,7 +158,6 @@ class SubmissionsController extends Controller
                 ->with('success', 'Berkas berhasil diunggah.');
         }
 
-        // Cek kelayakan naskah utama
         $hasMainFile = SubmissionFile::where('submission_id', $submission->id)
             ->where('file_role', 'naskah_utama')
             ->exists();
@@ -153,7 +167,6 @@ class SubmissionsController extends Controller
                 ->withErrors(['file' => 'Anda wajib mengunggah minimal 1 berkas dengan jenis "Naskah Utama" sebelum melanjutkan.']);
         }
 
-        // Lanjut ke Step 3 Metadata
         return redirect()->route('submissions.create.step3', $submission->id)
             ->with('success', 'Unggah berkas berhasil disimpan. Silakan lengkapi metadata naskah.');
     }
@@ -278,7 +291,6 @@ class SubmissionsController extends Controller
             'keywords.required' => 'Kata kunci (keywords) wajib diisi.',
         ]);
 
-        // Split keywords by comma
         $keywordsArray = array_map('trim', explode(',', $request->keywords));
 
         $submission->update([
@@ -289,7 +301,57 @@ class SubmissionsController extends Controller
             'updated_by' => $user->id,
         ]);
 
+        return redirect()->route('submissions.create.step4', $submission->id)
+            ->with('success', 'Metadata naskah berhasil disimpan. Tinjau kembali seluruh data sebelum penyerahan final.');
+    }
+
+    /**
+     * Step 4: Confirmation & Summary Page
+     */
+    public function createStep4($id)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
+        $submission = Submission::with(['journal', 'files', 'authors'])
+            ->where('corresponding_author_id', $user->id)
+            ->findOrFail($id);
+
+        return view('submissions::step4', compact('submission'));
+    }
+
+    /**
+     * Finish Step 4: Submit Final Manuscript
+     */
+    public function finishStep4(Request $request, $id)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
+        $submission = Submission::where('corresponding_author_id', $user->id)->findOrFail($id);
+
+        // Validasi kelengkapan syarat naskah final
+        $hasMainFile = SubmissionFile::where('submission_id', $submission->id)
+            ->where('file_role', 'naskah_utama')
+            ->exists();
+
+        if (!$hasMainFile || Str::startsWith($submission->title, 'Draf Naskah Tanpa Judul') || empty($submission->abstract)) {
+            return redirect()->route('submissions.create.step4', $submission->id)
+                ->withErrors(['submission' => 'Naskah belum memenuhi syarat kelengkapan (Judul, Abstrak, atau Naskah Utama belum terisi).']);
+        }
+
+        // Ubah status naskah dari 'draft' menjadi 'submitted'
+        $submission->update([
+            'status'       => 'submitted',
+            'submitted_at' => now(),
+            'updated_by'   => $user->id,
+        ]);
+
         return redirect()->route('submissions.index')
-            ->with('success', 'Metadata naskah berhasil disimpan dan draf naskah telah diperbarui.');
+            ->with('success', 'Selamat! Naskah ilmiah Anda berhasil diserahkan (submitted) dan saat ini sedang menunggu proses pemeriksaan dewan redaksi.');
     }
 }

@@ -127,7 +127,7 @@ class SubmissionsControllerTest extends TestCase
             'keywords' => 'Genomik, Kesehatan, Biomolekuler',
         ]);
 
-        $postResponse->assertRedirect(route('submissions.index'));
+        $postResponse->assertRedirect(route('submissions.create.step4', $submission->id));
         $this->assertDatabaseHas('submissions', [
             'id'    => $submission->id,
             'title' => 'Pengaruh Genomics Terhadap Kesehatan Masyarakat',
@@ -158,5 +158,39 @@ class SubmissionsControllerTest extends TestCase
         $deleteResponse = $this->actingAs($this->user)->delete(route('submissions.delete_author.step3', [$submission->id, $author->id]));
         $deleteResponse->assertRedirect(route('submissions.create.step3', $submission->id));
         $this->assertSoftDeleted($author);
+    }
+
+    public function test_user_can_finish_step4_and_submit_manuscript()
+    {
+        $submission = Submission::create([
+            'journal_id'              => $this->journal->id,
+            'title'                   => 'Analisis Genomik Terapan',
+            'slug'                    => 'analisis-genomik',
+            'abstract'                => 'Ini adalah ringkasan abstrak naskah ilmiah terapan genomik berkualitas tinggi.',
+            'keywords'                => ['Genomik', 'Analisis'],
+            'status'                  => 'draft',
+            'corresponding_author_id' => $this->user->id,
+        ]);
+
+        SubmissionFile::create([
+            'submission_id' => $submission->id,
+            'file_role'     => 'naskah_utama',
+            'disk'          => 'public',
+            'path'          => 'submissions/1/naskah.docx',
+            'original_name' => 'naskah.docx',
+            'uploaded_by'   => $this->user->id,
+        ]);
+
+        $response = $this->actingAs($this->user)->get(route('submissions.create.step4', $submission->id));
+        $response->assertStatus(200);
+        $response->assertViewIs('submissions::step4');
+
+        $finishResponse = $this->actingAs($this->user)->post(route('submissions.finish.step4', $submission->id));
+        $finishResponse->assertRedirect(route('submissions.index'));
+
+        $this->assertDatabaseHas('submissions', [
+            'id'     => $submission->id,
+            'status' => 'submitted',
+        ]);
     }
 }
