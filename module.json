@@ -22,6 +22,18 @@
                     "author",
                     "editor"
                 ]
+            },
+            {
+                "title": "Penelaahan Redaksi",
+                "path": "editor.submissions",
+                "icon": "ki-filled ki-verify text-lg",
+                "classes": "",
+                "attributes": [],
+                "permission": "",
+                "roles": [
+                    "administrator",
+                    "editor"
+                ]
             }
         ],
         "master": [],

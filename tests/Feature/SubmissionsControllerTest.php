@@ -193,4 +193,36 @@ class SubmissionsControllerTest extends TestCase
             'status' => 'submitted',
         ]);
     }
+
+    public function test_editor_can_view_submitted_manuscripts_and_make_decision()
+    {
+        $submission = Submission::create([
+            'journal_id'              => $this->journal->id,
+            'title'                   => 'Riset Genomik Manusia',
+            'slug'                    => 'riset-genomik',
+            'abstract'                => 'Abstrak riset genomik manusia.',
+            'status'                  => 'submitted',
+            'corresponding_author_id' => $this->user->id,
+        ]);
+
+        $indexResponse = $this->actingAs($this->user)->get(route('editor.submissions.index'));
+        $indexResponse->assertStatus(200);
+        $indexResponse->assertViewIs('submissions::editor.index');
+        $indexResponse->assertSee($submission->title);
+
+        $showResponse = $this->actingAs($this->user)->get(route('editor.submissions.show', $submission->id));
+        $showResponse->assertStatus(200);
+        $showResponse->assertViewIs('submissions::editor.show');
+
+        $decisionResponse = $this->actingAs($this->user)->post(route('editor.submissions.decision', $submission->id), [
+            'status' => 'accepted',
+            'notes'  => 'Naskah memenuhi standar publikasi tinggi.',
+        ]);
+
+        $decisionResponse->assertRedirect(route('editor.submissions.show', $submission->id));
+        $this->assertDatabaseHas('submissions', [
+            'id'     => $submission->id,
+            'status' => 'accepted',
+        ]);
+    }
 }

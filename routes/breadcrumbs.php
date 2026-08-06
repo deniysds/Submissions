@@ -31,3 +31,13 @@ Breadcrumbs::for('submissions.show', function (BreadcrumbTrail $trail, $submissi
     $trail->parent('submissions');
     $trail->push('Detail Naskah: ' . ($submission->title ?? 'Submission'), route('submissions.show', $submission->id));
 });
+
+// Editor Workflow Breadcrumbs
+Breadcrumbs::for('editor.submissions.index', function (BreadcrumbTrail $trail) {
+    $trail->push('Penelaahan Redaksi (Editor)', route('editor.submissions.index'));
+});
+
+Breadcrumbs::for('editor.submissions.show', function (BreadcrumbTrail $trail, $submission) {
+    $trail->parent('editor.submissions.index');
+    $trail->push('Evaluasi Naskah: ' . ($submission->title ?? 'Editor Review'), route('editor.submissions.show', $submission->id));
+});

@@ -1,10 +1,11 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Submissions\Http\Controllers\EditorSubmissionsController;
 use Modules\Submissions\Http\Controllers\SubmissionsController;
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    // Alur wizard step-by-step submission
+    // Alur wizard step-by-step submission (Penulis / Author)
     Route::get('submissions/create/step-1', [SubmissionsController::class, 'create'])->name('submissions.create.step1');
     Route::post('submissions/store/step-1', [SubmissionsController::class, 'storeStep1'])->name('submissions.store.step1');
 
@@ -19,6 +20,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('submissions/{id}/create/step-4', [SubmissionsController::class, 'createStep4'])->name('submissions.create.step4');
     Route::post('submissions/{id}/finish', [SubmissionsController::class, 'finishStep4'])->name('submissions.finish.step4');
+
+    // Manajemen Penelaahan Dewan Redaksi (Editor / Review Workflow)
+    Route::prefix('editor/submissions')->name('editor.submissions.')->group(function () {
+        Route::get('/', [EditorSubmissionsController::class, 'index'])->name('index');
+        Route::get('/{id}', [EditorSubmissionsController::class, 'show'])->name('show');
+        Route::post('/{id}/decision', [EditorSubmissionsController::class, 'makeDecision'])->name('decision');
+    });
 
     // Route bawaan resource
     Route::resource('submissions', SubmissionsController::class)->names('submissions')->except(['create', 'store']);
