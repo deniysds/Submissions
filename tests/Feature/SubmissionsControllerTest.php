@@ -201,7 +201,7 @@ class SubmissionsControllerTest extends TestCase
             'title'                   => 'Riset Genomik Manusia',
             'slug'                    => 'riset-genomik',
             'abstract'                => 'Abstrak riset genomik manusia.',
-            'status'                  => 'submitted',
+            'status'                  => 'under_editor_review',
             'corresponding_author_id' => $this->user->id,
         ]);
 

@@ -2,6 +2,7 @@
 
 namespace Modules\Submissions\Models;
 
+use App\Support\Editorial\SubmissionWorkflow;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Journals\Models\Journal;
@@ -24,6 +25,7 @@ class Submission extends Model
         'corresponding_author_id',
         'created_by',
         'updated_by',
+        'deleted_by',
     ];
 
     protected $casts = [
@@ -54,6 +56,41 @@ class Submission extends Model
 
     public function authors()
     {
-        return $this->hasMany(SubmissionAuthor::class);
+        return $this->hasMany(SubmissionAuthor::class)->orderBy('sort_order', 'asc');
+    }
+
+    public function histories()
+    {
+        return $this->hasMany(SubmissionHistory::class)->latest('happened_at');
+    }
+
+    /**
+     * Check if submission can transition to target status.
+     */
+    public function canTransitionTo(string $targetStatus): bool
+    {
+        /** @var SubmissionWorkflow $workflow */
+        $workflow = app(SubmissionWorkflow::class);
+        return $workflow->canTransition($this->status ?? 'draft', $targetStatus);
+    }
+
+    /**
+     * Get allowed next statuses.
+     */
+    public function allowedTransitions(): array
+    {
+        /** @var SubmissionWorkflow $workflow */
+        $workflow = app(SubmissionWorkflow::class);
+        return $workflow->allowedTransitions($this->status ?? 'draft');
+    }
+
+    /**
+     * Check if submission reached a final terminal status.
+     */
+    public function isFinalStatus(): bool
+    {
+        /** @var SubmissionWorkflow $workflow */
+        $workflow = app(SubmissionWorkflow::class);
+        return in_array($this->status, $workflow->finalStatuses(), true);
     }
 }

@@ -6,29 +6,20 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Modules\Submissions\Models\Submission;
+use Modules\Submissions\Services\SubmissionService;
 
 class EditorSubmissionsController extends Controller
 {
+    public function __construct(
+        protected SubmissionService $submissionService
+    ) {}
+
     /**
      * Display a listing of submissions submitted for Editorial Review.
      */
     public function index(Request $request)
     {
-        $query = Submission::with(['journal', 'author'])
-            ->where('status', '!=', 'draft');
-
-        // Filter pencarian berdasarkan kata kunci / judul
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where('title', 'like', "%{$search}%");
-        }
-
-        // Filter berdasarkan status
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        $submissions = $query->latest('submitted_at')->paginate(10);
+        $submissions = $this->submissionService->getEditorSubmissions($request);
 
         return view('submissions::editor.index', compact('submissions'));
     }
@@ -38,44 +29,81 @@ class EditorSubmissionsController extends Controller
      */
     public function show($id)
     {
-        $submission = Submission::with(['journal', 'files', 'authors', 'author'])
+        $submission = Submission::with(['journal', 'files', 'authors', 'author', 'editor', 'histories.actor'])
             ->where('status', '!=', 'draft')
             ->findOrFail($id);
 
-        return view('submissions::editor.show', compact('submission'));
+        $allowedTransitions = $submission->allowedTransitions();
+
+        return view('submissions::editor.show', compact('submission', 'allowedTransitions'));
     }
 
     /**
-     * Make Editorial Decision (Accept, Reject, Revision, In-Review).
+     * Make Editorial Decision (State transition with history logging).
      */
     public function makeDecision(Request $request, $id)
     {
         $user = Auth::user();
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
         $submission = Submission::where('status', '!=', 'draft')->findOrFail($id);
 
         $request->validate([
-            'status' => 'required|in:in_review,accepted,rejected,revision_required',
-            'notes'  => 'nullable|string',
+            'status' => 'required|string',
+            'notes'  => 'nullable|string|max:2000',
         ], [
             'status.required' => 'Keputusan dewan redaksi wajib dipilih.',
-            'status.in'       => 'Status keputusan tidak valid.',
         ]);
 
-        $submission->update([
-            'status'             => $request->status,
-            'assigned_editor_id' => $user->id,
-            'decision_at'        => now(),
-            'updated_by'         => $user->id,
-        ]);
+        try {
+            $this->submissionService->transitionStatus(
+                $submission,
+                $request->status,
+                $request->notes,
+                $user
+            );
+        } catch (\InvalidArgumentException $e) {
+            return redirect()->route('editor.submissions.show', $submission->id)
+                ->withErrors(['status' => $e->getMessage()]);
+        }
 
         $statusLabels = [
-            'in_review'         => 'Penelaahan (In-Review)',
-            'accepted'          => 'Diterima (Accepted)',
-            'rejected'          => 'Ditolak (Rejected)',
-            'revision_required' => 'Revisi Diperlukan (Revision Required)',
+            'under_editor_review' => 'Peninjauan Editor (Under Editor Review)',
+            'under_review'        => 'Penelaahan Mitra Bestari (Under Review)',
+            'revision_required'   => 'Revisi Diperlukan (Revision Required)',
+            'resubmitted'         => 'Naskah Revisi Masuk (Resubmitted)',
+            'accepted'            => 'Diterima (Accepted)',
+            'published'           => 'Diterbitkan (Published)',
+            'rejected'            => 'Ditolak (Rejected)',
         ];
 
+        $label = $statusLabels[$request->status] ?? $request->status;
+
         return redirect()->route('editor.submissions.show', $submission->id)
-            ->with('success', 'Keputusan redaksi berhasil diperbarui menjadi: ' . ($statusLabels[$request->status] ?? $request->status));
+            ->with('success', "Keputusan redaksi berhasil diperbarui menjadi: {$label}");
+    }
+
+    /**
+     * Assign an editor to manuscript.
+     */
+    public function assignEditor(Request $request, $id)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
+        $submission = Submission::where('status', '!=', 'draft')->findOrFail($id);
+
+        $request->validate([
+            'editor_id' => 'required|exists:users,id',
+        ]);
+
+        $this->submissionService->assignEditor($submission, (int) $request->editor_id, $user);
+
+        return redirect()->route('editor.submissions.show', $submission->id)
+            ->with('success', 'Editor penanggung jawab berhasil ditugaskan.');
     }
 }
