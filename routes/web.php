@@ -21,11 +21,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('submissions/{id}/create/step-4', [SubmissionsController::class, 'createStep4'])->name('submissions.create.step4');
     Route::post('submissions/{id}/finish', [SubmissionsController::class, 'finishStep4'])->name('submissions.finish.step4');
 
+    // Sertifikat Resmi DOI & Ringkasan Publikasi (Author & Editor)
+    Route::get('submissions/{id}/doi-certificate', [SubmissionsController::class, 'doiCertificate'])->name('submissions.doi_certificate');
+
     // Manajemen Penelaahan Dewan Redaksi (Editor / Review Workflow)
     Route::prefix('editor/submissions')->name('editor.submissions.')->group(function () {
         Route::get('/', [EditorSubmissionsController::class, 'index'])->name('index');
         Route::get('/{id}', [EditorSubmissionsController::class, 'show'])->name('show');
+        Route::get('/{id}/doi-certificate', [EditorSubmissionsController::class, 'doiCertificate'])->name('doi_certificate');
         Route::post('/{id}/decision', [EditorSubmissionsController::class, 'makeDecision'])->name('decision');
+        Route::post('/{id}/assign-editor', [EditorSubmissionsController::class, 'assignEditor'])->name('assign_editor');
     });
 
     // Route bawaan resource

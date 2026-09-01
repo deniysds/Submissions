@@ -48,6 +48,23 @@ class SubmissionsController extends Controller
     }
 
     /**
+     * Display the official DOI and Publication Certificate summary for author.
+     */
+    public function doiCertificate($id)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
+        $submission = Submission::with(['journal', 'files', 'authors', 'author'])
+            ->where('corresponding_author_id', $user->id)
+            ->findOrFail($id);
+
+        return view('submissions::doi.certificate', compact('submission'));
+    }
+
+    /**
      * Step 1: Show form for creating a new submission (Select Journal & Author Checklist).
      */
     public function create()

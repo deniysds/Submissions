@@ -11,9 +11,14 @@
                 <h1 class="text-2xl font-bold text-gray-900">Detail Pengajuan Naskah</h1>
                 <p class="text-xs text-gray-500 mt-1">Status dan berkas terlampir dari pengajuan naskah ilmiah Anda.</p>
             </div>
-            <a href="{{ route('submissions.index') }}" class="kt-btn kt-btn-outline text-xs">
-                &larr; Kembali ke Daftar Naskah
-            </a>
+            <div class="flex items-center gap-3">
+                <a href="{{ route('submissions.doi_certificate', $submission->id) }}" target="_blank" class="kt-btn kt-btn-primary text-white text-xs font-bold px-4 py-2 flex items-center gap-1.5 shadow-xs">
+                    <i class="ki-filled ki-document text-white"></i> Sertifikat DOI & Ringkasan
+                </a>
+                <a href="{{ route('submissions.index') }}" class="kt-btn kt-btn-outline text-xs">
+                    &larr; Kembali ke Daftar Naskah
+                </a>
+            </div>
         </div>
 
         <!-- Status Card -->

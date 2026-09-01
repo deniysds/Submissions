@@ -3,6 +3,8 @@
 namespace Modules\Submissions\Providers;
 
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
+use Modules\Submissions\Events\SubmissionStatusChanged;
+use Modules\Submissions\Listeners\SendSubmissionStatusNotification;
 
 class EventServiceProvider extends ServiceProvider
 {
@@ -11,7 +13,11 @@ class EventServiceProvider extends ServiceProvider
      *
      * @var array<string, array<int, string>>
      */
-    protected $listen = [];
+    protected $listen = [
+        SubmissionStatusChanged::class => [
+            SendSubmissionStatusNotification::class,
+        ],
+    ];
 
     /**
      * Indicates if events should be discovered.

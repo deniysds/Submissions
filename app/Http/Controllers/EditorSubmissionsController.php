@@ -39,6 +39,18 @@ class EditorSubmissionsController extends Controller
     }
 
     /**
+     * Display the official DOI and Publication Certificate summary for editor.
+     */
+    public function doiCertificate($id)
+    {
+        $submission = Submission::with(['journal', 'files', 'authors', 'author'])
+            ->where('status', '!=', 'draft')
+            ->findOrFail($id);
+
+        return view('submissions::doi.certificate', compact('submission'));
+    }
+
+    /**
      * Make Editorial Decision (State transition with history logging).
      */
     public function makeDecision(Request $request, $id)
