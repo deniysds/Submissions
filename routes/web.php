@@ -27,6 +27,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Manajemen Penelaahan Dewan Redaksi (Editor / Review Workflow)
     Route::prefix('editor/submissions')->name('editor.submissions.')->group(function () {
         Route::get('/', [EditorSubmissionsController::class, 'index'])->name('index');
+        Route::get('/export/csv', [EditorSubmissionsController::class, 'exportCsv'])->name('export');
         Route::get('/{id}', [EditorSubmissionsController::class, 'show'])->name('show');
         Route::get('/{id}/doi-certificate', [EditorSubmissionsController::class, 'doiCertificate'])->name('doi_certificate');
         Route::post('/{id}/decision', [EditorSubmissionsController::class, 'makeDecision'])->name('decision');

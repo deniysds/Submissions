@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Mail;
 use Modules\Submissions\Events\SubmissionStatusChanged;
 use Modules\Submissions\Mail\SubmissionStatusUpdatedMail;
 
-class SendSubmissionStatusNotification
+class SendSubmissionStatusNotification implements ShouldQueue
 {
     /**
      * Handle the event.

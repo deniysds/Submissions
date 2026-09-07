@@ -97,4 +97,26 @@ class SubmissionNotificationAndDoiTest extends TestCase
         $editorResponse->assertViewIs('submissions::doi.certificate');
         $editorResponse->assertSee('Karakterisasi Varian DNA Populasi');
     }
+
+    public function test_editor_can_export_submissions_report_to_csv(): void
+    {
+        Submission::create([
+            'journal_id'              => $this->journal->id,
+            'title'                   => 'Riset Genomik Kanker Paru',
+            'slug'                    => 'riset-kanker-paru',
+            'abstract'                => 'Abstrak riset kanker.',
+            'status'                  => 'under_editor_review',
+            'corresponding_author_id' => $this->author->id,
+            'created_by'              => $this->author->id,
+            'submitted_at'            => now(),
+        ]);
+
+        $response = $this->actingAs($this->editor)->get(route('editor.submissions.export'));
+
+        $response->assertStatus(200);
+        $this->assertEquals('text/csv; charset=UTF-8', $response->headers->get('content-type'));
+        $this->assertStringContainsString('attachment; filename="submissions_report_', $response->headers->get('content-disposition'));
+        $this->assertStringContainsString('Riset Genomik Kanker Paru', $response->streamedContent());
+        $this->assertStringContainsString('Indonesian Genomic Journal', $response->streamedContent());
+    }
 }

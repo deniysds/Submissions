@@ -118,4 +118,79 @@ class EditorSubmissionsController extends Controller
         return redirect()->route('editor.submissions.show', $submission->id)
             ->with('success', 'Editor penanggung jawab berhasil ditugaskan.');
     }
+
+    /**
+     * Export submissions report to CSV format (Excel compatible).
+     */
+    public function exportCsv(Request $request)
+    {
+        $query = Submission::with(['journal', 'author', 'editor', 'authors'])
+            ->where('status', '!=', 'draft');
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where('title', 'like', "%{$search}%");
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('journal_id')) {
+            $query->where('journal_id', $request->journal_id);
+        }
+
+        $submissions = $query->latest('submitted_at')->get();
+
+        $fileName = 'submissions_report_' . now()->format('Ymd_His') . '.csv';
+
+        $headers = [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$fileName}\"",
+            'Pragma'              => 'no-cache',
+            'Cache-Control'       => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires'             => '0',
+        ];
+
+        $callback = function () use ($submissions) {
+            $file = fopen('php://output', 'w');
+            fputs($file, "\xEF\xBB\xBF"); // UTF-8 BOM
+
+            fputcsv($file, [
+                'ID Naskah',
+                'Judul Naskah',
+                'Jurnal Publikasi',
+                'Penulis Korespondensi',
+                'Email Penulis',
+                'Status Naskah',
+                'Editor Bertugas',
+                'Tanggal Penyerahan',
+                'Tanggal Keputusan',
+                'DOI Permanen',
+            ]);
+
+            foreach ($submissions as $s) {
+                $doi = ($s->status === 'accepted' || $s->status === 'published')
+                    ? "https://doi.org/10.1234/ignite.{$s->journal?->slug}.{$s->id}"
+                    : '-';
+
+                fputcsv($file, [
+                    '#IGN-' . str_pad($s->id, 5, '0', STR_PAD_LEFT),
+                    $s->title,
+                    $s->journal?->name ?? '-',
+                    $s->author?->name ?? '-',
+                    $s->author?->email ?? '-',
+                    strtoupper(str_replace('_', ' ', $s->status)),
+                    $s->editor?->name ?? 'Belum Ditugaskan',
+                    $s->submitted_at ? $s->submitted_at->format('Y-m-d H:i') : '-',
+                    $s->decision_at ? $s->decision_at->format('Y-m-d H:i') : '-',
+                    $doi,
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
 }
