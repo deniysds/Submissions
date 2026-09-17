@@ -64,6 +64,21 @@ class Submission extends Model
         return $this->hasMany(SubmissionHistory::class)->latest('happened_at');
     }
 
+    public function article(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(\Modules\Issues\Models\Article::class, 'submission_id');
+    }
+
+    public function reviewRounds(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ReviewRound::class, 'submission_id')->orderBy('round_number', 'asc');
+    }
+
+    public function currentReviewRound(): ?ReviewRound
+    {
+        return $this->reviewRounds()->latest('round_number')->first();
+    }
+
     /**
      * Check if submission can transition to target status.
      */

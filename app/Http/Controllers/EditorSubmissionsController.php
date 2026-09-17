@@ -5,8 +5,12 @@ namespace Modules\Submissions\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
+use Modules\Submissions\Models\ReviewRound;
+use Modules\Submissions\Models\ReviewerAssignment;
 use Modules\Submissions\Models\Submission;
 use Modules\Submissions\Services\SubmissionService;
+use Modules\Usermanagement\Models\User;
 
 class EditorSubmissionsController extends Controller
 {
@@ -29,13 +33,14 @@ class EditorSubmissionsController extends Controller
      */
     public function show($id)
     {
-        $submission = Submission::with(['journal', 'files', 'authors', 'author', 'editor', 'histories.actor'])
+        $submission = Submission::with(['journal', 'files', 'authors', 'author', 'editor', 'histories.actor', 'reviewRounds.assignments.reviewer'])
             ->where('status', '!=', 'draft')
             ->findOrFail($id);
 
         $allowedTransitions = $submission->allowedTransitions();
+        $availableReviewers = User::where('id', '!=', $submission->corresponding_author_id)->get();
 
-        return view('submissions::editor.show', compact('submission', 'allowedTransitions'));
+        return view('submissions::editor.show', compact('submission', 'allowedTransitions', 'availableReviewers'));
     }
 
     /**
@@ -117,6 +122,76 @@ class EditorSubmissionsController extends Controller
 
         return redirect()->route('editor.submissions.show', $submission->id)
             ->with('success', 'Editor penanggung jawab berhasil ditugaskan.');
+    }
+
+    /**
+     * Assign a peer reviewer to the manuscript.
+     */
+    public function assignReviewer(Request $request, $id)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
+        $submission = Submission::where('status', '!=', 'draft')->findOrFail($id);
+
+        $request->validate([
+            'reviewer_id' => 'required|exists:users,id',
+            'due_date'    => 'nullable|date',
+        ], [
+            'reviewer_id.required' => 'Mitra bestari (reviewer) wajib dipilih.',
+            'reviewer_id.exists'   => 'Akun mitra bestari tidak ditemukan.',
+        ]);
+
+        if ((int) $request->reviewer_id === (int) $submission->corresponding_author_id) {
+            return redirect()->route('editor.submissions.show', $submission->id)
+                ->withErrors(['reviewer_id' => 'Penulis utama tidak dapat ditugaskan sebagai reviewer naskahnya sendiri.']);
+        }
+
+        // Get or create active review round
+        $round = $submission->reviewRounds()->where('status', 'in_progress')->latest('round_number')->first();
+        if (!$round) {
+            $latestRoundNumber = $submission->reviewRounds()->max('round_number') ?? 0;
+            $round = ReviewRound::create([
+                'submission_id' => $submission->id,
+                'round_number'  => $latestRoundNumber + 1,
+                'status'        => 'in_progress',
+                'started_at'    => now(),
+                'created_by'    => $user->id,
+            ]);
+        }
+
+        // Prevent assigning the same reviewer twice in the same round
+        $existingAssignment = ReviewerAssignment::where('review_round_id', $round->id)
+            ->where('reviewer_id', $request->reviewer_id)
+            ->first();
+
+        if ($existingAssignment) {
+            return redirect()->route('editor.submissions.show', $submission->id)
+                ->withErrors(['reviewer_id' => 'Mitra bestari ini sudah ditugaskan pada putaran telaah ini.']);
+        }
+
+        ReviewerAssignment::create([
+            'review_round_id'  => $round->id,
+            'reviewer_id'      => (int) $request->reviewer_id,
+            'invitation_token' => Str::random(40),
+            'response_status'  => 'pending',
+            'due_date'         => $request->due_date ?: now()->addDays(14)->toDateString(),
+            'created_by'       => $user->id,
+        ]);
+
+        if (in_array($submission->status, ['submitted', 'under_editor_review', 'resubmitted'], true)) {
+            $this->submissionService->transitionStatus(
+                $submission,
+                'under_review',
+                'Editor menugaskan mitra bestari untuk penelaahan sejawat.',
+                $user
+            );
+        }
+
+        return redirect()->route('editor.submissions.show', $submission->id)
+            ->with('success', 'Mitra bestari berhasil ditugaskan untuk telaah naskah ini.');
     }
 
     /**

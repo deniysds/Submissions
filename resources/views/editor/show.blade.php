@@ -41,11 +41,25 @@
                         <label for="status" class="kt-label font-semibold text-gray-700 text-xs">
                             Pilih Status Keputusan Redaksi <span class="text-danger-600">*</span>
                         </label>
+                        @php
+                            $statusLabels = [
+                                'under_editor_review' => 'Peninjauan Editor (Under Editor Review)',
+                                'under_review'        => 'Penelaahan Mitra Bestari (Under Review)',
+                                'revision_required'   => 'Revisi Diperlukan (Revision Required)',
+                                'resubmitted'         => 'Naskah Revisi Masuk (Resubmitted)',
+                                'accepted'            => 'Diterima Publikasi (Accepted)',
+                                'published'           => 'Diterbitkan (Published)',
+                                'rejected'            => 'Ditolak (Rejected)',
+                            ];
+                        @endphp
                         <select name="status" id="status" class="kt-select w-full text-xs" required>
-                            <option value="in_review" {{ $submission->status === 'in_review' ? 'selected' : '' }}>Penelaahan Mitra Bestari (In-Review)</option>
-                            <option value="revision_required" {{ $submission->status === 'revision_required' ? 'selected' : '' }}>Revisi Diperlukan (Revision Required)</option>
-                            <option value="accepted" {{ $submission->status === 'accepted' ? 'selected' : '' }}>Diterima Publikasi (Accepted)</option>
-                            <option value="rejected" {{ $submission->status === 'rejected' ? 'selected' : '' }}>Ditolak (Rejected)</option>
+                            @forelse($allowedTransitions as $transition)
+                                <option value="{{ $transition }}">
+                                    {{ $statusLabels[$transition] ?? strtoupper(str_replace('_', ' ', $transition)) }}
+                                </option>
+                            @empty
+                                <option value="" disabled selected>Tidak ada transisi keputusan lanjutan (Status Final: {{ strtoupper($submission->status) }})</option>
+                            @endforelse
                         </select>
                     </div>
 
@@ -58,7 +72,7 @@
                 </div>
 
                 <div class="flex justify-end pt-2">
-                    <button type="submit" class="kt-btn kt-btn-primary text-white text-xs px-6 py-2">
+                    <button type="submit" class="kt-btn kt-btn-primary text-white text-xs px-6 py-2" {{ empty($allowedTransitions) ? 'disabled' : '' }}>
                         Simpan Keputusan Redaksi
                     </button>
                 </div>
@@ -147,6 +161,121 @@
                         </ul>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Panel Manajemen Mitra Bestari & Round Telaah -->
+        <div class="kt-card">
+            <div class="kt-card-header min-h-14 py-4 border-b border-gray-200">
+                <div>
+                    <h3 class="kt-card-title text-base font-bold flex items-center gap-2">
+                        <i class="ki-filled ki-document-filter text-red-600"></i> Dewan Mitra Bestari (Peer Reviewers)
+                    </h3>
+                    <p class="text-[11px] text-gray-500 mt-0.5">Penugasan reviewer, pemantauan batas waktu, dan kompilasi rekomendasi hasil telaah sejawat.</p>
+                </div>
+            </div>
+            
+            <div class="kt-card-body p-6 space-y-6">
+                <!-- Form Penugasan Reviewer Baru -->
+                <div class="p-4 rounded-xl bg-gray-50 border border-gray-200">
+                    <h4 class="font-bold text-gray-800 text-xs mb-3 flex items-center gap-1.5">
+                        <i class="ki-filled ki-user-edit text-gray-600"></i> Tugaskan Mitra Bestari Baru
+                    </h4>
+                    <form action="{{ route('editor.submissions.assign_reviewer', $submission->id) }}" method="POST" class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                        @csrf
+                        <div class="sm:col-span-6 space-y-1">
+                            <label class="kt-label text-xs font-semibold text-gray-700">Pilih Reviewer <span class="text-danger-600">*</span></label>
+                            <select name="reviewer_id" class="kt-select w-full text-xs" required>
+                                <option value="">-- Pilih Akun Mitra Bestari --</option>
+                                @foreach($availableReviewers as $rev)
+                                    <option value="{{ $rev->id }}">{{ $rev->name }} ({{ $rev->email }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="sm:col-span-4 space-y-1">
+                            <label class="kt-label text-xs font-semibold text-gray-700">Batas Waktu Telaah</label>
+                            <input type="date" name="due_date" value="{{ now()->addDays(14)->format('Y-m-d') }}" class="kt-input w-full text-xs" />
+                        </div>
+                        <div class="sm:col-span-2">
+                            <button type="submit" class="kt-btn kt-btn-primary text-white text-xs w-full py-2">
+                                <i class="ki-filled ki-plus mr-1"></i> Tugaskan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Daftar Putaran Telaah (Review Rounds) -->
+                @forelse($submission->reviewRounds as $round)
+                    <div class="border border-gray-200 rounded-xl overflow-hidden">
+                        <div class="bg-gray-100/70 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-gray-900 text-xs">Putaran #{{ $round->round_number }}</span>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold {{ $round->status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800' }}">
+                                    {{ $round->status === 'completed' ? 'Selesai' : 'Sedang Berjalan' }}
+                                </span>
+                            </div>
+                            <span class="text-[11px] text-gray-500">
+                                Dimulai: {{ $round->started_at ? $round->started_at->format('d M Y') : '-' }}
+                            </span>
+                        </div>
+
+                        <div class="p-4 space-y-3">
+                            @forelse($round->assignments as $assignment)
+                                <div class="p-3.5 rounded-lg border border-gray-150 bg-white space-y-2">
+                                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                        <div>
+                                            <span class="font-bold text-gray-900 text-xs block">{{ $assignment->reviewer?->name ?? 'Reviewer' }}</span>
+                                            <span class="text-[11px] text-gray-500 block">{{ $assignment->reviewer?->email }}</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            @if($assignment->response_status === 'pending')
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">Menunggu Respon</span>
+                                            @elseif($assignment->response_status === 'accepted')
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">Sedang Menelaah</span>
+                                            @elseif($assignment->response_status === 'completed')
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-green-50 text-green-700 border border-green-200">Selesai Menelaah</span>
+                                            @elseif($assignment->response_status === 'declined')
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-red-50 text-red-700 border border-red-200">Undangan Ditolak</span>
+                                            @endif
+
+                                            @if($assignment->recommendation)
+                                                @if($assignment->recommendation === 'accept')
+                                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-800">Rekomendasi: Accept</span>
+                                                @elseif($assignment->recommendation === 'minor_revision')
+                                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-100 text-cyan-800">Rekomendasi: Minor Rev</span>
+                                                @elseif($assignment->recommendation === 'major_revision')
+                                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">Rekomendasi: Major Rev</span>
+                                                @elseif($assignment->recommendation === 'reject')
+                                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800">Rekomendasi: Reject</span>
+                                                @endif
+                                            @endif
+                                        </div>
+                                    </div>
+
+                                    @if($assignment->response_status === 'completed')
+                                        <div class="pt-2 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                            <div class="p-2.5 rounded bg-gray-50">
+                                                <strong class="text-[10px] uppercase text-gray-500 block mb-1">Catatan untuk Penulis:</strong>
+                                                <p class="text-gray-700 text-[11px] whitespace-pre-line">{{ $assignment->comments_for_author }}</p>
+                                            </div>
+                                            <div class="p-2.5 rounded bg-red-50/50">
+                                                <strong class="text-[10px] uppercase text-red-600 block mb-1">Catatan Rahasia untuk Editor:</strong>
+                                                <p class="text-gray-700 text-[11px] whitespace-pre-line">{{ $assignment->confidential_comments_to_editor ?: '-' }}</p>
+                                            </div>
+                                        </div>
+                                    @endif
+                                </div>
+                            @empty
+                                <p class="text-xs text-gray-400 italic">Belum ada mitra bestari yang ditugaskan pada putaran ini.</p>
+                            @endforelse
+                        </div>
+                    </div>
+                @empty
+                    <div class="text-center py-6 text-gray-400 text-xs">
+                        <i class="ki-filled ki-document-filter text-3xl text-gray-300 block mb-2"></i>
+                        Belum ada putaran telaah mitra bestari untuk naskah ini. Gunakan formulir di atas untuk menugaskan reviewer pertama.
+                    </div>
+                @endforelse
             </div>
         </div>
     </div>

@@ -41,3 +41,14 @@ Breadcrumbs::for('editor.submissions.show', function (BreadcrumbTrail $trail, $s
     $trail->parent('editor.submissions.index');
     $trail->push('Evaluasi Naskah: ' . ($submission->title ?? 'Editor Review'), route('editor.submissions.show', $submission->id));
 });
+
+// Reviewer Workflow Breadcrumbs
+Breadcrumbs::for('reviewer.assignments.index', function (BreadcrumbTrail $trail) {
+    $trail->push('Tugas Telaah Mitra Bestari', route('reviewer.assignments.index'));
+});
+
+Breadcrumbs::for('reviewer.assignments.show', function (BreadcrumbTrail $trail, $assignment) {
+    $trail->parent('reviewer.assignments.index');
+    $title = $assignment->round?->submission?->title ?? 'Naskah Review';
+    $trail->push('Evaluasi Naskah: ' . \Illuminate\Support\Str::limit($title, 40), route('reviewer.assignments.show', $assignment->id));
+});

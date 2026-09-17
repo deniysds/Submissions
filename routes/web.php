@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Submissions\Http\Controllers\EditorSubmissionsController;
+use Modules\Submissions\Http\Controllers\ReviewerWorkspaceController;
 use Modules\Submissions\Http\Controllers\SubmissionsController;
 
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -32,6 +33,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/{id}/doi-certificate', [EditorSubmissionsController::class, 'doiCertificate'])->name('doi_certificate');
         Route::post('/{id}/decision', [EditorSubmissionsController::class, 'makeDecision'])->name('decision');
         Route::post('/{id}/assign-editor', [EditorSubmissionsController::class, 'assignEditor'])->name('assign_editor');
+        Route::post('/{id}/assign-reviewer', [EditorSubmissionsController::class, 'assignReviewer'])->name('assign_reviewer');
+    });
+
+    // Ruang Kerja Mitra Bestari (Reviewer Workspace)
+    Route::prefix('reviewer/assignments')->name('reviewer.assignments.')->group(function () {
+        Route::get('/', [ReviewerWorkspaceController::class, 'index'])->name('index');
+        Route::get('/{id}', [ReviewerWorkspaceController::class, 'show'])->name('show');
+        Route::post('/{id}/respond', [ReviewerWorkspaceController::class, 'respond'])->name('respond');
+        Route::post('/{id}/submit', [ReviewerWorkspaceController::class, 'submitReview'])->name('submit');
+        Route::get('/{id}/download/{fileId}', [ReviewerWorkspaceController::class, 'downloadFile'])->name('download');
     });
 
     // Route bawaan resource

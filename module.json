@@ -34,6 +34,19 @@
                     "administrator",
                     "editor"
                 ]
+            },
+            {
+                "title": "Tugas Mitra Bestari",
+                "path": "reviewer.assignments.index",
+                "icon": "ki-filled ki-document-filter text-lg",
+                "classes": "",
+                "attributes": [],
+                "permission": "",
+                "roles": [
+                    "administrator",
+                    "editor",
+                    "author"
+                ]
             }
         ],
         "master": [],
