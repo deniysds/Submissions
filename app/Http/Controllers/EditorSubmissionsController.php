@@ -39,8 +39,10 @@ class EditorSubmissionsController extends Controller
 
         $allowedTransitions = $submission->allowedTransitions();
         $availableReviewers = User::where('id', '!=', $submission->corresponding_author_id)->get();
+        $availableIssues = \Modules\Issues\Models\Issue::where('journal_id', $submission->journal_id)->get();
+        $article = \Modules\Issues\Models\Article::where('submission_id', $submission->id)->first();
 
-        return view('submissions::editor.show', compact('submission', 'allowedTransitions', 'availableReviewers'));
+        return view('submissions::editor.show', compact('submission', 'allowedTransitions', 'availableReviewers', 'availableIssues', 'article'));
     }
 
     /**
@@ -100,6 +102,66 @@ class EditorSubmissionsController extends Controller
 
         return redirect()->route('editor.submissions.show', $submission->id)
             ->with('success', "Keputusan redaksi berhasil diperbarui menjadi: {$label}");
+    }
+
+    /**
+     * Publish / Schedule an accepted manuscript into an Issue.
+     */
+    public function publishToIssue(Request $request, $id)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
+        $submission = Submission::with(['journal', 'files'])->where('status', '!=', 'draft')->findOrFail($id);
+
+        $request->validate([
+            'issue_id' => 'required|exists:issues,id',
+            'pages'    => 'nullable|string|max:50',
+            'doi'      => 'nullable|string|max:100',
+        ], [
+            'issue_id.required' => 'Issue terbitan wajib dipilih.',
+            'issue_id.exists'   => 'Issue terbitan tidak valid.',
+        ]);
+
+        $issue = \Modules\Issues\Models\Issue::findOrFail($request->issue_id);
+
+        // Generate default DOI if not provided
+        $doi = $request->doi ?: ('10.1234/' . ($submission->journal?->slug ?: 'ignite') . '.' . $issue->publication_year . '.' . $issue->volume . '.' . $issue->number . '.' . str_pad((string)$submission->id, 4, '0', STR_PAD_LEFT));
+
+        $mainFile = $submission->files->where('file_role', 'naskah_utama')->first();
+
+        // Create or update Article record
+        $article = \Modules\Issues\Models\Article::updateOrCreate(
+            ['submission_id' => $submission->id],
+            [
+                'issue_id'        => $issue->id,
+                'title'           => $submission->title,
+                'slug'            => $submission->slug,
+                'abstract'        => $submission->abstract,
+                'keywords'        => $submission->keywords,
+                'pages'           => $request->pages ?: '1-10',
+                'doi'             => $doi,
+                'file_path'       => $mainFile?->path,
+                'published_at'    => now(),
+            ]
+        );
+
+        // If status was 'accepted', transition to 'published'
+        if ($submission->status === 'accepted') {
+            $this->submissionService->transitionStatus(
+                $submission,
+                'published',
+                "Naskah resmi diterbitkan ke {$issue->title} (Vol. {$issue->volume} No. {$issue->number}) dengan DOI: {$doi}",
+                $user
+            );
+        } else {
+            $submission->update(['status' => 'published', 'decision_at' => now()]);
+        }
+
+        return redirect()->route('editor.submissions.show', $submission->id)
+            ->with('success', "Naskah berhasil diterbitkan ke {$issue->title} (Vol. {$issue->volume} No. {$issue->number}) dengan DOI: {$doi}!");
     }
 
     /**

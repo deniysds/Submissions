@@ -44,11 +44,25 @@
                                         <td class="px-4 py-3 max-w-sm truncate text-gray-700">{{ $sub->title }}</td>
                                         <td class="px-4 py-3">
                                             @if($sub->status === 'draft')
-                                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-600 border border-gray-200">Draf</span>
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-700 border border-gray-200">Draf</span>
                                             @elseif($sub->status === 'submitted')
-                                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-100">Diserahkan</span>
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">Diserahkan</span>
+                                            @elseif($sub->status === 'under_editor_review')
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">Peninjauan Redaksi</span>
+                                            @elseif($sub->status === 'under_review')
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">Telaah Mitra Bestari</span>
+                                            @elseif($sub->status === 'revision_required')
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-800 border border-orange-200 animate-pulse">Perlu Revisi</span>
+                                            @elseif($sub->status === 'resubmitted')
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200">Revisi Terkirim</span>
+                                            @elseif($sub->status === 'accepted')
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Diterima</span>
+                                            @elseif($sub->status === 'published')
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-green-50 text-green-700 border border-green-200">Diterbitkan</span>
+                                            @elseif($sub->status === 'rejected')
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-red-50 text-red-700 border border-red-200">Ditolak</span>
                                             @else
-                                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-green-50 text-green-700 border border-green-100">{{ $sub->status }}</span>
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-gray-50 text-gray-700 border border-gray-200">{{ $sub->status }}</span>
                                             @endif
                                         </td>
                                         <td class="px-4 py-3 text-gray-500">{{ $sub->created_at->format('d M Y') }}</td>
@@ -56,6 +70,10 @@
                                             @if($sub->status === 'draft')
                                                 <a href="{{ route('submissions.create.step2', $sub->id) }}" class="kt-btn kt-btn-xs kt-btn-ghost text-warning">
                                                     <i class="ki-filled ki-pencil"></i> Lanjutkan
+                                                </a>
+                                            @elseif($sub->status === 'revision_required')
+                                                <a href="{{ route('submissions.show', $sub->id) }}" class="kt-btn kt-btn-xs kt-btn-primary text-white font-semibold">
+                                                    <i class="ki-filled ki-cloud-change text-white"></i> Unggah Revisi
                                                 </a>
                                             @else
                                                 <a href="{{ route('submissions.show', $sub->id) }}" class="kt-btn kt-btn-xs kt-btn-ghost text-primary">

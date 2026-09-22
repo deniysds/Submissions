@@ -40,7 +40,16 @@ class SubmissionsController extends Controller
             return redirect()->route('login');
         }
 
-        $submission = Submission::with(['journal', 'files', 'authors', 'histories.actor'])
+        $submission = Submission::with([
+            'journal',
+            'files',
+            'authors',
+            'histories.actor',
+            'reviewRounds.assignments' => function ($q) {
+                $q->whereNotNull('comments_for_author')
+                  ->where('response_status', 'accepted');
+            },
+        ])
             ->where('corresponding_author_id', $user->id)
             ->findOrFail($id);
 
@@ -301,5 +310,51 @@ class SubmissionsController extends Controller
 
         return redirect()->route('submissions.index')
             ->with('success', 'Selamat! Naskah ilmiah Anda berhasil diserahkan (submitted) dan saat ini sedang menunggu proses pemeriksaan dewan redaksi.');
+    }
+
+    /**
+     * Resubmit Revised Manuscript by Author
+     */
+    public function resubmit(Request $request, $id)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
+        $submission = Submission::where('corresponding_author_id', $user->id)->findOrFail($id);
+
+        if ($submission->status !== 'revision_required') {
+            return redirect()->route('submissions.show', $submission->id)
+                ->withErrors(['status' => 'Naskah ini tidak dalam status memerlukan revisi.']);
+        }
+
+        $request->validate([
+            'file'           => 'required|file|mimes:docx,doc,pdf|max:20480',
+            'response_notes' => 'required|string|min:10',
+        ], [
+            'file.required'           => 'Berkas naskah perbaikan wajib diunggah.',
+            'file.mimes'              => 'Format berkas naskah perbaikan harus berupa DOC, DOCX, atau PDF.',
+            'file.max'                => 'Ukuran berkas maksimal 20 MB.',
+            'response_notes.required' => 'Catatan tanggapan perbaikan penulis wajib diisi.',
+            'response_notes.min'      => 'Catatan tanggapan perbaikan minimal 10 karakter.',
+        ]);
+
+        $this->submissionService->uploadFile($submission, $request->file('file'), 'naskah_revisi', $user);
+
+        try {
+            $this->submissionService->transitionStatus(
+                $submission,
+                'resubmitted',
+                $request->response_notes,
+                $user
+            );
+        } catch (\InvalidArgumentException $e) {
+            return redirect()->route('submissions.show', $submission->id)
+                ->withErrors(['status' => $e->getMessage()]);
+        }
+
+        return redirect()->route('submissions.show', $submission->id)
+            ->with('success', 'Naskah revisi dan catatan tanggapan Anda berhasil dikirim ke Dewan Redaksi.');
     }
 }
