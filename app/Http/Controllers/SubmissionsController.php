@@ -5,7 +5,10 @@ namespace Modules\Submissions\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Modules\Journals\Models\Journal;
+use Modules\Submissions\Mail\SubmissionReceivedMail;
 use Modules\Submissions\Models\Submission;
 use Modules\Submissions\Services\SubmissionService;
 
@@ -303,6 +306,14 @@ class SubmissionsController extends Controller
 
         try {
             $this->submissionService->submitFinal($submission, $user);
+
+            if (!empty($user->email)) {
+                try {
+                    Mail::to($user->email)->send(new SubmissionReceivedMail($submission, $user));
+                } catch (\Throwable $mailEx) {
+                    Log::error('Gagal mengirim email tanda terima naskah: ' . $mailEx->getMessage());
+                }
+            }
         } catch (\InvalidArgumentException $e) {
             return redirect()->route('submissions.create.step4', $submission->id)
                 ->withErrors(['submission' => $e->getMessage()]);

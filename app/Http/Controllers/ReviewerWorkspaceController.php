@@ -5,9 +5,13 @@ namespace Modules\Submissions\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Modules\Submissions\Mail\ReviewCompletedMail;
 use Modules\Submissions\Models\ReviewerAssignment;
 use Modules\Submissions\Models\SubmissionFile;
+use Modules\Usermanagement\Models\User;
 
 class ReviewerWorkspaceController extends Controller
 {
@@ -111,8 +115,50 @@ class ReviewerWorkspaceController extends Controller
             'updated_by'                      => $user->id,
         ]);
 
+        $submission = $assignment->round?->submission;
+        $editor = $submission?->editor;
+        $editorEmail = $editor?->email;
+
+        if (!$editorEmail) {
+            $editorUser = User::whereHas('roles', function ($q) {
+                $q->where('name', 'editor');
+            })->first();
+            $editorEmail = $editorUser?->email;
+        }
+
+        if ($editorEmail && $submission) {
+            try {
+                Mail::to($editorEmail)->send(
+                    new ReviewCompletedMail($submission, $assignment, $editor)
+                );
+            } catch (\Throwable $e) {
+                Log::error('Gagal mengirim email review selesai ke editor: ' . $e->getMessage());
+            }
+        }
+
         return redirect()->route('reviewer.assignments.show', $assignment->id)
             ->with('success', 'Hasil penelaahan sejawat berhasil dikirimkan ke dewan redaksi.');
+    }
+
+    /**
+     * Handle direct invitation token link from email.
+     */
+    public function handleInvitationToken(string $token)
+    {
+        $assignment = ReviewerAssignment::where('invitation_token', $token)->firstOrFail();
+
+        $user = Auth::user();
+        if (!$user) {
+            session(['url.intended' => route('reviewer.assignments.show', $assignment->id)]);
+            return redirect()->route('login');
+        }
+
+        if ((int) $user->id !== (int) $assignment->reviewer_id) {
+            return redirect()->route('dashboard')
+                ->with('error', 'Tautan undangan ini ditujukan untuk akun reviewer lain.');
+        }
+
+        return redirect()->route('reviewer.assignments.show', $assignment->id);
     }
 
     /**

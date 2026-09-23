@@ -40,6 +40,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/{id}/assign-reviewer', [EditorSubmissionsController::class, 'assignReviewer'])->name('assign_reviewer');
     });
 
+    // Tautan Undangan Email Mitra Bestari
+    Route::get('reviewer/invitation/{token}', [ReviewerWorkspaceController::class, 'handleInvitationToken'])->name('reviewer.invitation.handle');
+
     // Ruang Kerja Mitra Bestari (Reviewer Workspace)
     Route::prefix('reviewer/assignments')->name('reviewer.assignments.')->group(function () {
         Route::get('/', [ReviewerWorkspaceController::class, 'index'])->name('index');

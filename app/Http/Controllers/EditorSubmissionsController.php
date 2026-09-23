@@ -5,7 +5,10 @@ namespace Modules\Submissions\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Modules\Submissions\Mail\ReviewerInvitationMail;
 use Modules\Submissions\Models\ReviewRound;
 use Modules\Submissions\Models\ReviewerAssignment;
 use Modules\Submissions\Models\Submission;
@@ -234,7 +237,7 @@ class EditorSubmissionsController extends Controller
                 ->withErrors(['reviewer_id' => 'Mitra bestari ini sudah ditugaskan pada putaran telaah ini.']);
         }
 
-        ReviewerAssignment::create([
+        $assignment = ReviewerAssignment::create([
             'review_round_id'  => $round->id,
             'reviewer_id'      => (int) $request->reviewer_id,
             'invitation_token' => Str::random(40),
@@ -242,6 +245,17 @@ class EditorSubmissionsController extends Controller
             'due_date'         => $request->due_date ?: now()->addDays(14)->toDateString(),
             'created_by'       => $user->id,
         ]);
+
+        $reviewer = User::find($request->reviewer_id);
+        if ($reviewer && !empty($reviewer->email)) {
+            try {
+                Mail::to($reviewer->email)->send(
+                    new ReviewerInvitationMail($submission, $assignment, $reviewer)
+                );
+            } catch (\Throwable $e) {
+                Log::error('Gagal mengirim email undangan reviewer: ' . $e->getMessage());
+            }
+        }
 
         if (in_array($submission->status, ['submitted', 'under_editor_review', 'resubmitted'], true)) {
             $this->submissionService->transitionStatus(
