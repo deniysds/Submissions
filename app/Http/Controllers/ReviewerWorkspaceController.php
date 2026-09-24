@@ -136,6 +136,21 @@ class ReviewerWorkspaceController extends Controller
             }
         }
 
+        $targetEditor = $editor ?: ($editorUser ?? null);
+        if ($targetEditor && $submission) {
+            try {
+                $targetEditor->notify(new \App\Notifications\EditorialNotification(
+                    title: 'Telaah Sejawat Selesai',
+                    message: "Mitra bestari telah menyelesaikan telaah untuk naskah '{$submission->title}'.",
+                    actionUrl: route('editor.submissions.show', $submission->id),
+                    type: 'success',
+                    icon: 'ki-check-circle'
+                ));
+            } catch (\Throwable $ne) {
+                Log::error('Gagal mengirim in-app notification ke editor: ' . $ne->getMessage());
+            }
+        }
+
         return redirect()->route('reviewer.assignments.show', $assignment->id)
             ->with('success', 'Hasil penelaahan sejawat berhasil dikirimkan ke dewan redaksi.');
     }

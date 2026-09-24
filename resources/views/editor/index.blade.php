@@ -12,6 +12,9 @@
                 <p class="text-xs text-gray-500 mt-1">Daftar naskah ilmiah yang telah diserahkan oleh penulis untuk dievaluasi oleh Dewan Redaksi IGNITE.</p>
             </div>
             <div class="flex items-center gap-3">
+                <a href="{{ route('editor.reports.index') }}" class="kt-btn kt-btn-outline-primary text-xs font-semibold px-4 py-2.5">
+                    <i class="ki-filled ki-chart-line-up mr-1"></i> Laporan Statistik Kinerja
+                </a>
                 <a href="{{ route('editor.submissions.export', request()->query()) }}" class="kt-btn kt-btn-primary text-white text-xs font-semibold px-4 py-2.5">
                     <i class="ki-filled ki-file-down text-white mr-1"></i> Ekspor Laporan CSV
                 </a>

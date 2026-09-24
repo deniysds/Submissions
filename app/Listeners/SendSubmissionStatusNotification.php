@@ -37,6 +37,24 @@ class SendSubmissionStatusNotification implements ShouldQueue
                     )
                 );
             }
+
+            // In-App Notification untuk Penulis
+            $authorUser = $submission->author;
+            if ($authorUser) {
+                try {
+                    $statusName = strtoupper(str_replace('_', ' ', $event->toStatus));
+                    $type = in_array($event->toStatus, ['accepted', 'published']) ? 'success' : ($event->toStatus === 'revision_required' ? 'warning' : ($event->toStatus === 'rejected' ? 'danger' : 'info'));
+                    $authorUser->notify(new \App\Notifications\EditorialNotification(
+                        title: "Status Naskah: {$statusName}",
+                        message: "Naskah '{$submission->title}' diperbarui ke status {$statusName}.",
+                        actionUrl: route('submissions.show', $submission->id),
+                        type: $type,
+                        icon: 'ki-document'
+                    ));
+                } catch (\Throwable $notifEx) {
+                    Log::error('Gagal mengirim in-app notification: ' . $notifEx->getMessage());
+                }
+            }
         } catch (\Throwable $e) {
             Log::error('Gagal mengirimkan email notifikasi status naskah: ' . $e->getMessage(), [
                 'submission_id' => $event->submission->id ?? null,

@@ -257,6 +257,20 @@ class EditorSubmissionsController extends Controller
             }
         }
 
+        if ($reviewer) {
+            try {
+                $reviewer->notify(new \App\Notifications\EditorialNotification(
+                    title: 'Undangan Menelaah Naskah',
+                    message: "Anda ditugaskan menelaah naskah '{$submission->title}' pada jurnal {$submission->journal?->name}.",
+                    actionUrl: route('reviewer.assignments.show', $assignment->id),
+                    type: 'info',
+                    icon: 'ki-profile-user'
+                ));
+            } catch (\Throwable $ne) {
+                Log::error('Gagal mengirim in-app notification ke reviewer: ' . $ne->getMessage());
+            }
+        }
+
         if (in_array($submission->status, ['submitted', 'under_editor_review', 'resubmitted'], true)) {
             $this->submissionService->transitionStatus(
                 $submission,

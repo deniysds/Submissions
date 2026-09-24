@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Submissions\Http\Controllers\EditorialReportController;
 use Modules\Submissions\Http\Controllers\EditorSubmissionsController;
 use Modules\Submissions\Http\Controllers\ReviewerWorkspaceController;
 use Modules\Submissions\Http\Controllers\SubmissionsController;
@@ -27,6 +28,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Pengiriman Naskah Hasil Revisi oleh Penulis (Resubmit Revision)
     Route::post('submissions/{id}/resubmit', [SubmissionsController::class, 'resubmit'])->name('submissions.resubmit');
+
+    // Laporan Statistik Kinerja Redaksi & Reviewer
+    Route::prefix('editor/reports')->name('editor.reports.')->group(function () {
+        Route::get('/', [EditorialReportController::class, 'index'])->name('index');
+        Route::get('/export/csv', [EditorialReportController::class, 'exportCsv'])->name('export');
+    });
 
     // Manajemen Penelaahan Dewan Redaksi (Editor / Review Workflow)
     Route::prefix('editor/submissions')->name('editor.submissions.')->group(function () {
