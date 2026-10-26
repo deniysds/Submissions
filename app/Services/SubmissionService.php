@@ -132,16 +132,26 @@ class SubmissionService
                 ? $data['keywords']
                 : array_map('trim', explode(',', (string) $data['keywords']));
 
+            $keywordsEn = null;
+            if (!empty($data['keywords_en'])) {
+                $keywordsEn = is_array($data['keywords_en'])
+                    ? $data['keywords_en']
+                    : array_map('trim', explode(',', (string) $data['keywords_en']));
+            }
+
             $title = $data['title'];
             $baseSlug = Str::slug(Str::limit($title, 100));
             $slug = $baseSlug . '-' . Str::random(5);
 
             $submission->update([
-                'title'      => $title,
-                'slug'       => $slug,
-                'abstract'   => $data['abstract'],
-                'keywords'   => $keywords,
-                'updated_by' => $user->id,
+                'title'       => $title,
+                'title_en'    => $data['title_en'] ?? $submission->title_en,
+                'slug'        => $slug,
+                'abstract'    => $data['abstract'],
+                'abstract_en' => $data['abstract_en'] ?? $submission->abstract_en,
+                'keywords'    => $keywords,
+                'keywords_en' => $keywordsEn ?? $submission->keywords_en,
+                'updated_by'  => $user->id,
             ]);
 
             return $submission;

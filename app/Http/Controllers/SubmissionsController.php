@@ -260,9 +260,12 @@ class SubmissionsController extends Controller
         $submission = Submission::where('corresponding_author_id', $user->id)->findOrFail($id);
 
         $validated = $request->validate([
-            'title'    => 'required|string|max:500',
-            'abstract' => 'required|string|min:50',
-            'keywords' => 'required|string',
+            'title'       => 'required|string|max:500',
+            'title_en'    => 'nullable|string|max:500',
+            'abstract'    => 'required|string|min:50',
+            'abstract_en' => 'nullable|string',
+            'keywords'    => 'required|string',
+            'keywords_en' => 'nullable|string',
         ], [
             'title.required'    => 'Judul naskah wajib diisi.',
             'abstract.min'      => 'Abstrak naskah minimal memuat 50 karakter.',

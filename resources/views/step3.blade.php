@@ -45,36 +45,91 @@
             <div class="kt-card-header min-h-14 py-4 border-b border-gray-200">
                 <h3 class="kt-card-title text-base font-bold">Informasi Naskah (Metadata)</h3>
             </div>
-            <div class="kt-card-body p-6">
+            <div class="kt-card-body p-6" x-data="{ activeMetaTab: 'id' }">
                 <form id="step3-form" action="{{ route('submissions.store.step3', $submission->id) }}" method="POST" class="space-y-6">
                     @csrf
 
-                    <!-- Judul Naskah -->
-                    <div class="space-y-2">
-                        <label for="title" class="kt-label font-semibold text-gray-700 text-xs">
-                            Judul Naskah (Title) <span class="text-danger-600">*</span>
-                        </label>
-                        <input type="text" name="title" id="title" value="{{ old('title', Str::startsWith($submission->title, 'Draf Naskah Tanpa Judul') ? '' : $submission->title) }}" placeholder="Masukkan judul lengkap naskah..." class="kt-input w-full text-xs" required />
+                    <!-- Language Switcher Tabs -->
+                    <div class="flex items-center justify-between border-b border-gray-150 pb-3">
+                        <div class="flex items-center gap-2">
+                            <button type="button" @click="activeMetaTab = 'id'" :class="activeMetaTab === 'id' ? 'bg-red-600 text-white font-bold shadow-xs' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 font-semibold'" class="px-3.5 py-1.5 rounded-lg text-xs transition flex items-center gap-1.5">
+                                <span>🇮🇩</span> Bahasa Indonesia <span class="text-[10px] opacity-80">(Wajib *)</span>
+                            </button>
+                            <button type="button" @click="activeMetaTab = 'en'" :class="activeMetaTab === 'en' ? 'bg-red-600 text-white font-bold shadow-xs' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 font-semibold'" class="px-3.5 py-1.5 rounded-lg text-xs transition flex items-center gap-1.5">
+                                <span>🇬🇧</span> English Version <span class="text-[10px] opacity-80">(Bilingual)</span>
+                            </button>
+                        </div>
+                        <span class="text-[11px] text-gray-400 hidden sm:inline">Lengkapi metadata naskah dalam dua bahasa</span>
                     </div>
 
-                    <!-- Abstrak Naskah -->
-                    <div class="space-y-2">
-                        <label for="abstract" class="kt-label font-semibold text-gray-700 text-xs">
-                            Abstrak Naskah (Abstract) <span class="text-danger-600">*</span>
-                        </label>
-                        <textarea name="abstract" id="abstract" rows="6" placeholder="Tuliskan ringkasan/abstrak naskah ilmiah..." class="kt-input w-full text-xs p-3" required>{{ old('abstract', $submission->abstract) }}</textarea>
+                    <!-- Tab ID -->
+                    <div x-show="activeMetaTab === 'id'" class="space-y-5">
+                        <!-- Judul Naskah (ID) -->
+                        <div class="space-y-2">
+                            <label for="title" class="kt-label font-semibold text-gray-700 text-xs">
+                                Judul Naskah (Bahasa Indonesia) <span class="text-danger-600">*</span>
+                            </label>
+                            <input type="text" name="title" id="title" value="{{ old('title', Str::startsWith($submission->title, 'Draf Naskah Tanpa Judul') ? '' : $submission->title) }}" placeholder="Masukkan judul lengkap naskah dalam bahasa Indonesia..." class="kt-input w-full text-xs" required />
+                        </div>
+
+                        <!-- Abstrak Naskah (ID) -->
+                        <div class="space-y-2">
+                            <label for="abstract" class="kt-label font-semibold text-gray-700 text-xs">
+                                Abstrak Naskah (Bahasa Indonesia) <span class="text-danger-600">*</span>
+                            </label>
+                            <textarea name="abstract" id="abstract" rows="6" placeholder="Tuliskan ringkasan/abstrak naskah ilmiah minimal 50 karakter..." class="kt-input w-full text-xs p-3 leading-relaxed" required>{{ old('abstract', $submission->abstract) }}</textarea>
+                        </div>
+
+                        <!-- Kata Kunci (ID) -->
+                        <div class="space-y-2">
+                            <label for="keywords" class="kt-label font-semibold text-gray-700 text-xs">
+                                Kata Kunci (Bahasa Indonesia) <span class="text-danger-600">*</span>
+                            </label>
+                            @php
+                                $keywordsString = is_array($submission->keywords) ? implode(', ', $submission->keywords) : '';
+                            @endphp
+                            <input type="text" name="keywords" id="keywords" value="{{ old('keywords', $keywordsString) }}" placeholder="Contoh: Genomik, Bioinformatika, Kesehatan Molekuler (Pisahkan dengan koma)" class="kt-input w-full text-xs" required />
+                            <p class="text-[10px] text-gray-400">Gunakan tanda koma (,) untuk memisahkan setiap kata kunci.</p>
+                        </div>
                     </div>
 
-                    <!-- Kata Kunci (Keywords) -->
-                    <div class="space-y-2">
-                        <label for="keywords" class="kt-label font-semibold text-gray-700 text-xs">
-                            Kata Kunci (Keywords) <span class="text-danger-600">*</span>
-                        </label>
-                        @php
-                            $keywordsString = is_array($submission->keywords) ? implode(', ', $submission->keywords) : '';
-                        @endphp
-                        <input type="text" name="keywords" id="keywords" value="{{ old('keywords', $keywordsString) }}" placeholder="Contoh: Genomik, Bioinformatika, Kesehatan (Pisahkan dengan koma)" class="kt-input w-full text-xs" required />
-                        <p class="text-[10px] text-gray-400">Gunakan tanda koma (,) untuk memisahkan setiap kata kunci.</p>
+                    <!-- Tab EN -->
+                    <div x-show="activeMetaTab === 'en'" style="display: none;" class="space-y-5">
+                        <div class="p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-xs flex items-start gap-2">
+                            <i class="ki-filled ki-information text-base text-blue-600 shrink-0 mt-0.5"></i>
+                            <div>
+                                <span class="font-bold block">International Indexing Metadata (English)</span>
+                                <span>Sangat disarankan untuk pengindeksan jurnal bereputasi (Crossref DOI, Google Scholar, DOAJ). Jika terisi, metadata ini akan ditampilkan saat pembaca memilih bahasa English.</span>
+                            </div>
+                        </div>
+
+                        <!-- Article Title (EN) -->
+                        <div class="space-y-2">
+                            <label for="title_en" class="kt-label font-semibold text-gray-700 text-xs">
+                                Manuscript Title (English)
+                            </label>
+                            <input type="text" name="title_en" id="title_en" value="{{ old('title_en', $submission->title_en) }}" placeholder="Enter full manuscript title in English..." class="kt-input w-full text-xs" />
+                        </div>
+
+                        <!-- Abstract (EN) -->
+                        <div class="space-y-2">
+                            <label for="abstract_en" class="kt-label font-semibold text-gray-700 text-xs">
+                                Manuscript Abstract (English)
+                            </label>
+                            <textarea name="abstract_en" id="abstract_en" rows="6" placeholder="Write manuscript abstract in English..." class="kt-input w-full text-xs p-3 leading-relaxed">{{ old('abstract_en', $submission->abstract_en) }}</textarea>
+                        </div>
+
+                        <!-- Keywords (EN) -->
+                        <div class="space-y-2">
+                            <label for="keywords_en" class="kt-label font-semibold text-gray-700 text-xs">
+                                Keywords (English)
+                            </label>
+                            @php
+                                $keywordsEnString = is_array($submission->keywords_en) ? implode(', ', $submission->keywords_en) : '';
+                            @endphp
+                            <input type="text" name="keywords_en" id="keywords_en" value="{{ old('keywords_en', $keywordsEnString) }}" placeholder="e.g. Genomics, Bioinformatics, Molecular Health (Comma separated)" class="kt-input w-full text-xs" />
+                            <p class="text-[10px] text-gray-400">Separate keywords with commas (,).</p>
+                        </div>
                     </div>
                 </form>
             </div>

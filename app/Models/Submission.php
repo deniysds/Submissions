@@ -15,9 +15,12 @@ class Submission extends Model
     protected $fillable = [
         'journal_id',
         'title',
+        'title_en',
         'slug',
         'abstract',
+        'abstract_en',
         'keywords',
+        'keywords_en',
         'status',
         'submitted_at',
         'decision_at',
@@ -30,9 +33,40 @@ class Submission extends Model
 
     protected $casts = [
         'keywords' => 'array',
+        'keywords_en' => 'array',
         'submitted_at' => 'datetime',
         'decision_at' => 'datetime',
     ];
+
+    /**
+     * Localized title according to active application locale.
+     */
+    public function getTitleLocalizedAttribute(): string
+    {
+        return (app()->getLocale() === 'en' && !empty($this->title_en))
+            ? $this->title_en
+            : (string) $this->title;
+    }
+
+    /**
+     * Localized abstract according to active application locale.
+     */
+    public function getAbstractLocalizedAttribute(): ?string
+    {
+        return (app()->getLocale() === 'en' && !empty($this->abstract_en))
+            ? $this->abstract_en
+            : $this->abstract;
+    }
+
+    /**
+     * Localized keywords according to active application locale.
+     */
+    public function getKeywordsLocalizedAttribute(): ?array
+    {
+        return (app()->getLocale() === 'en' && !empty($this->keywords_en))
+            ? $this->keywords_en
+            : $this->keywords;
+    }
 
     public function journal()
     {

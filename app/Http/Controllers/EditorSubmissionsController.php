@@ -141,9 +141,12 @@ class EditorSubmissionsController extends Controller
             [
                 'issue_id'        => $issue->id,
                 'title'           => $submission->title,
+                'title_en'        => $submission->title_en,
                 'slug'            => $submission->slug,
                 'abstract'        => $submission->abstract,
+                'abstract_en'     => $submission->abstract_en,
                 'keywords'        => $submission->keywords,
+                'keywords_en'     => $submission->keywords_en,
                 'pages'           => $request->pages ?: '1-10',
                 'doi'             => $doi,
                 'file_path'       => $mainFile?->path,

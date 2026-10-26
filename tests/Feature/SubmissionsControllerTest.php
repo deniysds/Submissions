@@ -122,16 +122,31 @@ class SubmissionsControllerTest extends TestCase
         $response->assertViewIs('submissions::step3');
 
         $postResponse = $this->actingAs($this->user)->post(route('submissions.store.step3', $submission->id), [
-            'title'    => 'Pengaruh Genomics Terhadap Kesehatan Masyarakat',
-            'abstract' => 'Abstrak penelitian ini membahas pengaruh teknologi genomik modern secara mendalam untuk masyarakat.',
-            'keywords' => 'Genomik, Kesehatan, Biomolekuler',
+            'title'       => 'Pengaruh Genomics Terhadap Kesehatan Masyarakat',
+            'title_en'    => 'Impact of Genomics on Public Health',
+            'abstract'    => 'Abstrak penelitian ini membahas pengaruh teknologi genomik modern secara mendalam untuk masyarakat.',
+            'abstract_en' => 'This study investigates the comprehensive impact of modern genomic technology on public healthcare.',
+            'keywords'    => 'Genomik, Kesehatan, Biomolekuler',
+            'keywords_en' => 'Genomics, Public Health, Biomolecular',
         ]);
 
         $postResponse->assertRedirect(route('submissions.create.step4', $submission->id));
         $this->assertDatabaseHas('submissions', [
-            'id'    => $submission->id,
-            'title' => 'Pengaruh Genomics Terhadap Kesehatan Masyarakat',
+            'id'       => $submission->id,
+            'title'    => 'Pengaruh Genomics Terhadap Kesehatan Masyarakat',
+            'title_en' => 'Impact of Genomics on Public Health',
         ]);
+
+        $freshSubmission = $submission->fresh();
+        $this->assertEquals('Impact of Genomics on Public Health', $freshSubmission->title_en);
+        $this->assertEquals('Pengaruh Genomics Terhadap Kesehatan Masyarakat', $freshSubmission->title_localized);
+        
+        // When locale is switched to EN
+        app()->setLocale('en');
+        $this->assertEquals('Impact of Genomics on Public Health', $freshSubmission->title_localized);
+        $this->assertEquals('This study investigates the comprehensive impact of modern genomic technology on public healthcare.', $freshSubmission->abstract_localized);
+        $this->assertContains('Genomics', $freshSubmission->keywords_localized);
+        app()->setLocale('id');
     }
 
     public function test_user_can_add_and_delete_co_authors()
