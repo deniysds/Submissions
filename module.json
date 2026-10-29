@@ -38,7 +38,7 @@
             {
                 "title": "Tugas Mitra Bestari",
                 "path": "reviewer.assignments.index",
-                "icon": "ki-filled ki-document-filter text-lg",
+                "icon": "ki-filled ki-user-edit text-lg",
                 "classes": "",
                 "attributes": [],
                 "permission": "",

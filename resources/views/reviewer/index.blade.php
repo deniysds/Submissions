@@ -135,7 +135,7 @@
                                 <tr>
                                     <td colspan="7" class="text-center py-8 text-gray-500">
                                         <div class="flex flex-col items-center justify-center space-y-2">
-                                            <i class="ki-filled ki-document-filter text-4xl text-gray-300"></i>
+                                            <i class="ki-filled ki-user-edit text-4xl text-gray-300"></i>
                                             <p class="text-xs font-medium">Belum ada penugasan telaah manuskrip untuk akun Anda saat ini.</p>
                                         </div>
                                     </td>

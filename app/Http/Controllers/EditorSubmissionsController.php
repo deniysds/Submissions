@@ -166,6 +166,11 @@ class EditorSubmissionsController extends Controller
             $submission->update(['status' => 'published', 'decision_at' => now()]);
         }
 
+        if ($request->filled('redirect_to')) {
+            return redirect($request->input('redirect_to'))
+                ->with('success', "Naskah berhasil dimasukkan ke {$issue->title} (Vol. {$issue->volume} No. {$issue->number}) dengan DOI: {$doi}!");
+        }
+
         return redirect()->route('editor.submissions.show', $submission->id)
             ->with('success', "Naskah berhasil diterbitkan ke {$issue->title} (Vol. {$issue->volume} No. {$issue->number}) dengan DOI: {$doi}!");
     }

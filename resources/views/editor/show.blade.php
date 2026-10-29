@@ -267,7 +267,7 @@
             <div class="kt-card-header min-h-14 py-4 border-b border-gray-200">
                 <div>
                     <h3 class="kt-card-title text-base font-bold flex items-center gap-2">
-                        <i class="ki-filled ki-document-filter text-red-600"></i> Dewan Mitra Bestari (Peer Reviewers)
+                        <i class="ki-filled ki-user-tick text-red-600"></i> Dewan Mitra Bestari (Peer Reviewers)
                     </h3>
                     <p class="text-[11px] text-gray-500 mt-0.5">Penugasan reviewer, pemantauan batas waktu, dan kompilasi rekomendasi hasil telaah sejawat.</p>
                 </div>
@@ -370,7 +370,7 @@
                     </div>
                 @empty
                     <div class="text-center py-6 text-gray-400 text-xs">
-                        <i class="ki-filled ki-document-filter text-3xl text-gray-300 block mb-2"></i>
+                        <i class="ki-filled ki-user-edit text-3xl text-gray-300 block mb-2"></i>
                         Belum ada putaran telaah mitra bestari untuk naskah ini. Gunakan formulir di atas untuk menugaskan reviewer pertama.
                     </div>
                 @endforelse
